@@ -7,11 +7,12 @@ Support can handle customer refund requests for eligible orders quickly from the
 Support agents and customers requesting their money back when an order is not right.
 
 ## Scope
-- Support can refund an order from the orders screen.
+- Support agents can start and complete a refund for an order from the orders screen.
 - Refunds are available only for orders placed in the last 30 days.
-- A refund gives the customer their money back.
-- The same order cannot be refunded twice.
-- Support agents see a clear message if something goes wrong.
+- A refund returns the customer’s money for the order.
+- Each order can be refunded only once.
+- Orders that have already been refunded cannot be refunded again.
+- Support agents see a clear message when a refund cannot be completed or something goes wrong.
 
 ## Exclusions
 - Refund reporting.
