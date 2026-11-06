@@ -1,0 +1,15 @@
+# High-risk paths. A change here needs the owner's review once "Require review from Code Owners" is on
+# for develop and main (see the orchestrator runbook, section 1.4c).
+# Placeholder owner: the demo has one person. Replace with the solution architect and the security specialist.
+
+# The standards every design is checked against, and the decisions behind them
+/guardrails/                       @SanjulikaSthirAI
+
+# Approved design material: contracts, ADRs, and the list of protected contracts
+/sdlc/*/design/                    @SanjulikaSthirAI
+/sdlc/*/adr/                       @SanjulikaSthirAI
+/sdlc/*/protected-contracts.json   @SanjulikaSthirAI
+
+# The checks themselves
+/.github/                          @SanjulikaSthirAI
+/scripts/                          @SanjulikaSthirAI

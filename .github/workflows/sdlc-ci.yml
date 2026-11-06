@@ -1,0 +1,24 @@
+# The first sdlc-ci workflow: verify the artifact repo itself. The code repos run lint and tests; this one
+# checks the standards, ADRs and (later) the intent folders the orchestrator writes.
+name: sdlc-ci
+
+on:
+  pull_request:
+  push:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml==6.0.3 pytest==9.2.0
+      - run: python scripts/verify_artifacts.py
+      - run: pytest -q
