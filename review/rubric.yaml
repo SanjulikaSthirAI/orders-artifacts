@@ -1,0 +1,76 @@
+# review/rubric.yaml: the G4 rubric. Keep this file in the artifact repo as a PROTECTED file:
+#   - CODEOWNERS: the Solution Architect and the Tech lead own `review/`;
+#   - changes only by pull request, never by the coding agent or the orchestrator's own commits.
+# The orchestrator reads it from the artifact repo's base branch at every review and records its version and
+# sha256 in each rubric record (RUB-n). Bump `version` on every change.
+#
+# Mandatory criteria are floors: each must be met, with evidence, or the candidate fails whatever else scores.
+# Quality criteria are scored 0 to 3 (0 not met, 1 met with a major issue, 2 partially met, 3 fully met) and none
+# may be below `quality_pass_minimum`. Every model answer cites a changed file:line; no valid citation scores
+# 0 / not met. Missing evidence is a failure. A criterion may be "not applicable" only where `na_allowed: true`
+# (with the condition in `na_when`); the reason is recorded.
+#
+# All numbers and wording here are PROPOSED until calibrated (decision D22).
+version: 1
+quality_pass_minimum: 2
+criteria:
+  # ---- mandatory ----
+  - id: M1
+    kind: mandatory
+    name: Every acceptance criterion of the story has at least one test case
+    decided_by: code
+    check: ac_tests_exist
+  - id: M2
+    kind: mandatory
+    name: Those tests ran on this commit and passed
+    decided_by: code
+    check: tests_passed
+    evidence_checks: [tests]   # CI 1 (push) checks that must be `success` for the head SHA: the unit tests ran
+  - id: M3
+    kind: mandatory
+    name: The behaviour matches each acceptance criterion's intent, including its negative case
+    decided_by: spec
+  - id: M4
+    kind: mandatory
+    name: No protected contract changed, unless the story is marked as a contract change
+    decided_by: code
+    check: protected_contract_unchanged
+  - id: M5
+    kind: mandatory
+    name: Every new path (endpoint, handler, job, consumer) has an authorization check
+    decided_by: standards
+    na_allowed: true
+    na_when: the story adds no new request path, handler, job or message consumer
+  - id: M6
+    kind: mandatory
+    name: A data change is reversible and safe to roll back
+    decided_by: standards
+    na_allowed: true
+    na_when: the story changes no data, schema or migration
+  # ---- quality ----
+  - id: QC1
+    kind: quality
+    name: Scope - every changed file is inside the story's plan, and each extra one is justified
+    decided_by: spec
+  - id: QC2
+    kind: quality
+    name: Extra unit tests (outside the locked test path) cover new branches and failure paths, and no assertion was weakened
+    decided_by: standards
+  - id: QC3
+    kind: quality
+    name: Compatible with current consumers - the contract version is bumped where needed and old clients still work
+    decided_by: spec
+  - id: QC4
+    kind: quality
+    name: Inputs are validated and no sensitive data is logged
+    decided_by: standards
+  - id: QC5
+    kind: quality
+    name: Errors are handled with context, and logs, metrics and traces cover the new behaviour
+    decided_by: standards
+  - id: QC6
+    kind: quality
+    name: Follows AGENTS.md and the tech guardrails, and reads clearly
+    decided_by: standards
+# On a high-risk story these quality criteria become mandatory: they must be fully met (3).
+high_risk_mandatory: [QC3, QC4]

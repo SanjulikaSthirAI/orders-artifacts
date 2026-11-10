@@ -13,3 +13,6 @@
 # The checks themselves
 /.github/                          @SanjulikaSthirAI
 /scripts/                          @SanjulikaSthirAI
+
+# The G4 rubric: the bar every story is judged by. Changes only by pull request; the bot and Codex never write it.
+/review/                           @SanjulikaSthirAI
