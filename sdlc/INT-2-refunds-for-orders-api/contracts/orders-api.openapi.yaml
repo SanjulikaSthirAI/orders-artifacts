@@ -1,0 +1,118 @@
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.1.0
+paths:
+  /orders/{order_id}/refunds:
+    post:
+      summary: Refund an order
+      operationId: refund_order_orders__order_id__refunds_post
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Order Id
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+            title: Idempotency-Key
+      responses:
+        '201':
+          description: Refund accepted or initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundResponse'
+        '400':
+          description: Missing idempotency key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Not authorized to refund
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Order not refundable or not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Refund conflict or payment failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    RefundResponse:
+      type: object
+      required:
+        - refund_timestamp
+        - refund_amount_cents
+      properties:
+        refund_timestamp:
+          type: string
+          format: date-time
+          title: Refund Timestamp
+        refund_amount_cents:
+          type: integer
+          minimum: 0
+          title: Refund Amount Cents
+    Error:
+      type: object
+      required:
+        - detail
+      properties:
+        detail:
+          type: string
+          title: Detail
+    HTTPValidationError:
+      type: object
+      properties:
+        detail:
+          type: array
+          items:
+            $ref: '#/components/schemas/ValidationError'
+    ValidationError:
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      properties:
+        loc:
+          type: array
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+        msg:
+          type: string
+        type:
+          type: string
+        input: {}
+        ctx:
+          type: object

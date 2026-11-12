@@ -18,3 +18,11 @@ A request for a refund that is allowed under the first-version refund rules.
 
 ## Manual finance intervention
 Finance team handling outside the API-supported refund flow that support currently depends on.
+
+## Idempotency key
+A caller-supplied value that identifies one refund request so retries can return the original outcome without creating another refund.
+_Avoid_: request ID
+
+## Refund audit history
+Internal history of refund attempts and outcomes kept for accountability.
+_Avoid_: refund reporting
