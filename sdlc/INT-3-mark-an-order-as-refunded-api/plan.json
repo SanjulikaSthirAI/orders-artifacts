@@ -1,0 +1,692 @@
+{
+  "intent_id": "INT-3",
+  "project_type": "brownfield",
+  "stories": [
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given a support user with the existing appropriate Orders API access and an Order that was created after the cutoff exactly 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when the support user records a Refund for the Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-1.2",
+          "text": "Given a support user with the existing appropriate Orders API access and an Order that was created exactly at the cutoff 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when the support user records a Refund for the Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-2.3",
+          "text": "Given a Refund is accepted for an Order, when the Orders API records the Refund, then the Refund time exposed on the Order is set by the Orders API at acceptance time and is not supplied by the support user."
+        },
+        {
+          "ac_id": "AC-3.1",
+          "text": "Given an existing Order is already refunded, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API does not record another Refund and returns reason code `ORDER_ALREADY_REFUNDED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-4.1",
+          "text": "Given an existing Order is a Cancelled order and is not already refunded, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API does not record a Refund and returns reason code `ORDER_CANCELLED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-5.1",
+          "text": "Given an existing Order was created before the cutoff exactly 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API does not record a Refund and returns reason code `ORDER_TOO_OLD` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-5.2",
+          "text": "Given an existing Order was created at or after the cutoff exactly 30 days before the Refund time in UTC, is not already refunded, and is not a Cancelled order, when a support user with the existing appropriate Orders API access records a Refund for that Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-6.1",
+          "text": "Given an existing Order is already refunded and is also a Cancelled order, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API returns reason code `ORDER_ALREADY_REFUNDED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-6.2",
+          "text": "Given an existing Order is already refunded and was created before the cutoff exactly 30 days before the Refund time, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API returns reason code `ORDER_ALREADY_REFUNDED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-6.3",
+          "text": "Given an existing Order is a Cancelled order, is not already refunded, and was created before the cutoff exactly 30 days before the Refund time, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API returns reason code `ORDER_CANCELLED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-7.1",
+          "text": "Given no Order exists for the provided order ID, when a support user with the existing appropriate Orders API access attempts to record a Refund for that order ID, then the Orders API does not record a Refund and returns reason code `ORDER_NOT_FOUND` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-8.1",
+          "text": "Given a support user with the existing appropriate Orders API access attempts to record less than a full Refund for an Order by order ID, when the request is processed, then the Orders API does not record a partial Refund."
+        }
+      ],
+      "changes_protected_contract": false,
+      "consumes": [],
+      "depends_on": [],
+      "description": "Implement refund-recording behavior in the store/service layer with injected UTC clock support, recording full Refunds on the existing Order representation without adding a new persistent store or payment-provider integration.",
+      "frs": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8"
+      ],
+      "id": "US-1",
+      "order": 1,
+      "provides": [],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "medium",
+      "risk_reasons": [],
+      "tdd_sections": [
+        "2.1",
+        "4",
+        "5",
+        "7",
+        "9"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1"
+          ],
+          "id": "TC-1.1",
+          "name": "records_refund_for_order_created_after_utc_cutoff",
+          "parameters": [
+            {
+              "expected": "success; order ord-after is exposed as refunded=true/status=refunded with refund_time=2025-01-31T12:00:00Z; exactly one full refund recorded; no payment-provider call",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-after, order_created_at=2025-01-02T12:00:00Z, order_status=open, already_refunded=false, request_refund_time_supplied=false, refund_amount_supplied=none"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-1.2"
+          ],
+          "id": "TC-1.2",
+          "name": "records_refund_for_order_created_exactly_at_utc_cutoff",
+          "parameters": [
+            {
+              "expected": "success; order ord-cutoff is exposed as refunded=true/status=refunded with refund_time=2025-01-31T12:00:00Z; exactly one full refund recorded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-cutoff, order_created_at=2025-01-01T12:00:00Z, order_status=open, already_refunded=false, request_refund_time_supplied=false, refund_amount_supplied=none"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-2.3"
+          ],
+          "id": "TC-1.3",
+          "name": "uses_injected_acceptance_time_not_client_supplied_time",
+          "parameters": [
+            {
+              "expected": "success; exposed refund_time=2025-01-31T12:00:00Z; client-supplied refund time is ignored/not persisted",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-client-time, order_created_at=2025-01-15T00:00:00Z, order_status=open, already_refunded=false, request_refund_time_supplied=2025-01-20T00:00:00Z"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-3.1"
+          ],
+          "id": "TC-1.4",
+          "name": "rejects_existing_refunded_order_without_second_refund",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_ALREADY_REFUNDED; message is non-empty; no additional refund recorded; existing_refund_time remains 2025-01-20T00:00:00Z",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-refunded, order_created_at=2025-01-15T00:00:00Z, order_status=refunded, already_refunded=true, existing_refund_time=2025-01-20T00:00:00Z"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-4.1"
+          ],
+          "id": "TC-1.5",
+          "name": "rejects_cancelled_order",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_CANCELLED; message is non-empty; no refund recorded; order is not exposed as newly refunded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-cancelled, order_created_at=2025-01-15T00:00:00Z, order_status=cancelled, already_refunded=false"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-5.1"
+          ],
+          "id": "TC-1.6",
+          "name": "rejects_order_created_before_utc_cutoff",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_TOO_OLD; message is non-empty; no refund recorded; order is not exposed as refunded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-too-old, order_created_at=2025-01-01T11:59:59Z, order_status=open, already_refunded=false"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-5.2"
+          ],
+          "id": "TC-1.7",
+          "name": "utc_cutoff_allows_at_and_after_boundary",
+          "parameters": [
+            {
+              "expected": "success; order is exposed as refunded with refund_time=2025-03-31T00:30:00Z",
+              "inputs": "now_utc=2025-03-31T00:30:00Z, order_id=ord-utc-at, order_created_at=2025-03-01T00:30:00Z, order_status=open, already_refunded=false"
+            },
+            {
+              "expected": "success; order is exposed as refunded with refund_time=2025-03-31T00:30:00Z",
+              "inputs": "now_utc=2025-03-31T00:30:00Z, order_id=ord-utc-after, order_created_at=2025-03-01T00:30:01Z, order_status=open, already_refunded=false"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-6.1"
+          ],
+          "id": "TC-1.8",
+          "name": "already_refunded_reason_has_priority_over_cancelled",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_ALREADY_REFUNDED; message is non-empty; no additional refund recorded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-refunded-cancelled, order_created_at=2025-01-15T00:00:00Z, order_status=cancelled, already_refunded=true"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-6.2"
+          ],
+          "id": "TC-1.9",
+          "name": "already_refunded_reason_has_priority_over_too_old",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_ALREADY_REFUNDED; message is non-empty; no additional refund recorded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-refunded-old, order_created_at=2024-12-31T12:00:00Z, order_status=refunded, already_refunded=true"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-6.3"
+          ],
+          "id": "TC-1.10",
+          "name": "cancelled_reason_has_priority_over_too_old",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_CANCELLED; message is non-empty; no refund recorded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-cancelled-old, order_created_at=2024-12-31T12:00:00Z, order_status=cancelled, already_refunded=false"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-7.1"
+          ],
+          "id": "TC-1.11",
+          "name": "missing_order_returns_not_found_reason",
+          "parameters": [
+            {
+              "expected": "not_allowed; reason_code=ORDER_NOT_FOUND; message is non-empty; no refund recorded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-missing, order_exists=false"
+            }
+          ],
+          "type": "unit"
+        },
+        {
+          "ac_ids": [
+            "AC-8.1"
+          ],
+          "id": "TC-1.12",
+          "name": "rejects_partial_refund_request_without_recording_partial_refund",
+          "parameters": [
+            {
+              "expected": "request rejected/not recorded as partial refund; no refund recorded; order is not exposed as newly refunded",
+              "inputs": "now_utc=2025-01-31T12:00:00Z, order_id=ord-partial, order_created_at=2025-01-15T00:00:00Z, order_status=open, already_refunded=false, refund_amount_supplied=10.00, order_total=100.00"
+            }
+          ],
+          "type": "unit"
+        }
+      ],
+      "title": "Add deterministic refund domain behavior in the Orders store",
+      "touches": [
+        "app/store.py",
+        "app/models.py",
+        "tests/**"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-2.1",
+          "text": "Given a Refund has been recorded for an Order, when the refund-recording response is returned, then the response includes the updated Order exposed as `refunded` and includes the Refund time."
+        },
+        {
+          "ac_id": "AC-2.2",
+          "text": "Given a Refund has been recorded for an Order, when the Order is retrieved afterward through the Orders API, then the retrieved Order is exposed as `refunded` and includes the Refund time."
+        },
+        {
+          "ac_id": "AC-2.3",
+          "text": "Given a Refund is accepted for an Order, when the Orders API records the Refund, then the Refund time exposed on the Order is set by the Orders API at acceptance time and is not supplied by the support user."
+        }
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-1"
+      ],
+      "description": "Extend the Order response model and existing retrieval/list/create/cancel responses so refunded Orders are exposed as `refunded` with `refund_time`, while non-refunded Orders remain backward compatible and existing order actions gain no new restrictions.",
+      "frs": [
+        "FR-2"
+      ],
+      "id": "US-2",
+      "order": 2,
+      "provides": [
+        "GET /orders",
+        "GET /orders/{order_id}",
+        "POST /orders",
+        "POST /orders/{order_id}/cancel"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "9"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-2.1"
+          ],
+          "id": "TC-2.1",
+          "name": "refund_recording_response_includes_refunded_order_and_refund_time",
+          "parameters": [
+            {
+              "expected": "success response body includes updated order exposed as refunded=true/status=refunded and refund_time=2025-01-31T12:00:00Z",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-response, order_created_at=2025-01-15T00:00:00Z, POST /orders/{order_id}/refunds body={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.2"
+          ],
+          "id": "TC-2.2",
+          "name": "retrieved_order_after_refund_is_exposed_as_refunded_with_time",
+          "parameters": [
+            {
+              "expected": "GET response includes order exposed as refunded=true/status=refunded and refund_time=2025-01-31T12:00:00Z",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-retrieve, order_created_at=2025-01-15T00:00:00Z, record refund then GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.3"
+          ],
+          "id": "TC-2.3",
+          "name": "api_sets_refund_time_at_acceptance_and_ignores_client_time",
+          "parameters": [
+            {
+              "expected": "success response and subsequent retrieval expose refund_time=2025-01-31T12:00:00Z, not 2025-01-20T00:00:00Z",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-api-time, order_created_at=2025-01-15T00:00:00Z, POST /orders/{order_id}/refunds body={refund_time:2025-01-20T00:00:00Z}"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Expose refunded Orders through existing Orders API responses",
+      "touches": [
+        "app/models.py",
+        "app/main.py",
+        "tests/**"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given a support user with the existing appropriate Orders API access and an Order that was created after the cutoff exactly 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when the support user records a Refund for the Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-1.2",
+          "text": "Given a support user with the existing appropriate Orders API access and an Order that was created exactly at the cutoff 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when the support user records a Refund for the Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-1.3",
+          "text": "Given an authenticated caller who is not a support user with the existing appropriate Orders API access, when the caller attempts to record a Refund for an Order by order ID, then the Orders API rejects the request and the Order is not exposed as newly refunded."
+        },
+        {
+          "ac_id": "AC-2.1",
+          "text": "Given a Refund has been recorded for an Order, when the refund-recording response is returned, then the response includes the updated Order exposed as `refunded` and includes the Refund time."
+        },
+        {
+          "ac_id": "AC-3.2",
+          "text": "Given a support user with the existing appropriate Orders API access repeats the same refund request for an Order that was already successfully refunded, when the repeated request is processed, then the Orders API returns reason code `ORDER_ALREADY_REFUNDED` with a non-empty human-readable message instead of returning success."
+        },
+        {
+          "ac_id": "AC-7.1",
+          "text": "Given no Order exists for the provided order ID, when a support user with the existing appropriate Orders API access attempts to record a Refund for that order ID, then the Orders API does not record a Refund and returns reason code `ORDER_NOT_FOUND` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-8.1",
+          "text": "Given a support user with the existing appropriate Orders API access attempts to record less than a full Refund for an Order by order ID, when the request is processed, then the Orders API does not record a partial Refund."
+        }
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-1",
+        "US-2"
+      ],
+      "description": "Add `POST /orders/{order_id}/refunds` using existing authentication and support authorization behavior, delegating refund eligibility to the store/service and translating domain outcomes to the approved success and not-allowed API responses.",
+      "frs": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8"
+      ],
+      "id": "US-3",
+      "order": 3,
+      "provides": [
+        "POST /orders/{order_id}/refunds"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "5",
+        "6",
+        "7",
+        "9"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1",
+            "AC-2.1"
+          ],
+          "id": "TC-3.1",
+          "name": "support_user_records_refund_for_order_after_cutoff_via_endpoint",
+          "parameters": [
+            {
+              "expected": "success; response body includes updated order exposed as refunded=true/status=refunded with refund_time=2025-01-31T12:00:00Z",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-endpoint-after, order_created_at=2025-01-02T12:00:00Z, order_status=open, POST /orders/{order_id}/refunds body={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.2"
+          ],
+          "id": "TC-3.2",
+          "name": "support_user_records_refund_for_order_at_cutoff_via_endpoint",
+          "parameters": [
+            {
+              "expected": "success; response body includes updated order exposed as refunded=true/status=refunded with refund_time=2025-01-31T12:00:00Z",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-endpoint-cutoff, order_created_at=2025-01-01T12:00:00Z, order_status=open, POST /orders/{order_id}/refunds body={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.3"
+          ],
+          "id": "TC-3.3",
+          "name": "non_support_authenticated_caller_cannot_record_refund",
+          "parameters": [
+            {
+              "expected": "authorization rejection using existing Orders API support authorization behavior; order is not exposed as newly refunded on subsequent retrieval",
+              "inputs": "authenticated=true, support_user_authorized=false, now_utc=2025-01-31T12:00:00Z, order_id=ord-not-support, order_created_at=2025-01-15T00:00:00Z, POST /orders/{order_id}/refunds body={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-3.2"
+          ],
+          "id": "TC-3.4",
+          "name": "repeated_refund_request_returns_already_refunded_reason",
+          "parameters": [
+            {
+              "expected": "first request succeeds; second request is not success and returns reason_code=ORDER_ALREADY_REFUNDED with non-empty message; no second refund recorded",
+              "inputs": "support_user_authorized=true, now_utc_first=2025-01-31T12:00:00Z, now_utc_second=2025-01-31T12:05:00Z, order_id=ord-repeat, order_created_at=2025-01-15T00:00:00Z, POST /orders/{order_id}/refunds twice with body={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-7.1"
+          ],
+          "id": "TC-3.5",
+          "name": "refund_endpoint_returns_order_not_found_for_missing_order",
+          "parameters": [
+            {
+              "expected": "not_allowed/not_found outcome; reason_code=ORDER_NOT_FOUND; message is non-empty; no refund recorded",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-missing, order_exists=false, POST /orders/{order_id}/refunds body={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-8.1"
+          ],
+          "id": "TC-3.6",
+          "name": "refund_endpoint_does_not_accept_partial_refund_body",
+          "parameters": [
+            {
+              "expected": "request is rejected or not allowed as partial refund; no partial refund recorded; subsequent retrieval does not expose order as newly refunded",
+              "inputs": "support_user_authorized=true, now_utc=2025-01-31T12:00:00Z, order_id=ord-endpoint-partial, order_created_at=2025-01-15T00:00:00Z, POST /orders/{order_id}/refunds body={amount:10.00}"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Add the refund-recording API endpoint",
+      "touches": [
+        "app/main.py",
+        "app/models.py",
+        "tests/**"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given a support user with the existing appropriate Orders API access and an Order that was created after the cutoff exactly 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when the support user records a Refund for the Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-2.2",
+          "text": "Given a Refund has been recorded for an Order, when the Order is retrieved afterward through the Orders API, then the retrieved Order is exposed as `refunded` and includes the Refund time."
+        },
+        {
+          "ac_id": "AC-3.1",
+          "text": "Given an existing Order is already refunded, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API does not record another Refund and returns reason code `ORDER_ALREADY_REFUNDED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-4.1",
+          "text": "Given an existing Order is a Cancelled order and is not already refunded, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API does not record a Refund and returns reason code `ORDER_CANCELLED` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-5.1",
+          "text": "Given an existing Order was created before the cutoff exactly 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when a support user with the existing appropriate Orders API access attempts to record a Refund for that Order by order ID, then the Orders API does not record a Refund and returns reason code `ORDER_TOO_OLD` with a non-empty human-readable message."
+        },
+        {
+          "ac_id": "AC-7.1",
+          "text": "Given no Order exists for the provided order ID, when a support user with the existing appropriate Orders API access attempts to record a Refund for that order ID, then the Orders API does not record a Refund and returns reason code `ORDER_NOT_FOUND` with a non-empty human-readable message."
+        }
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-3"
+      ],
+      "description": "Regenerate and commit the Orders API OpenAPI contract and contract test updates so the protected contract declares refunded Order exposure, the refund endpoint, and the approved refund-not-allowed reason-code responses.",
+      "frs": [
+        "FR-1",
+        "FR-2",
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7",
+        "FR-8"
+      ],
+      "id": "US-4",
+      "order": 4,
+      "provides": [
+        "GET /orders",
+        "GET /orders/{order_id}",
+        "POST /orders",
+        "POST /orders/{order_id}/cancel",
+        "POST /orders/{order_id}/refunds"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "7",
+        "9"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1"
+          ],
+          "id": "TC-4.1",
+          "name": "openapi_declares_refund_endpoint_success_response_with_refunded_order",
+          "parameters": [
+            {
+              "expected": "contract declares POST /orders/{order_id}/refunds; success response schema contains updated Order with refunded exposure and refund_time",
+              "inputs": "OpenAPI document=openapi.yaml, path=/orders/{order_id}/refunds, method=POST, success response schema"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-2.2"
+          ],
+          "id": "TC-4.2",
+          "name": "openapi_declares_retrieved_order_refund_fields",
+          "parameters": [
+            {
+              "expected": "contract declares retrieved Order may be exposed as refunded and includes refund_time for refunded Orders",
+              "inputs": "OpenAPI document=openapi.yaml, path=/orders/{order_id}, method=GET, order response schema"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-3.1",
+            "AC-4.1",
+            "AC-5.1",
+            "AC-7.1"
+          ],
+          "id": "TC-4.3",
+          "name": "openapi_declares_stable_refund_not_allowed_reason_codes",
+          "parameters": [
+            {
+              "expected": "contract declares not-allowed outcomes with stable reason_code enum values exactly including ORDER_ALREADY_REFUNDED, ORDER_CANCELLED, ORDER_TOO_OLD, ORDER_NOT_FOUND and a non-empty message field",
+              "inputs": "OpenAPI document=openapi.yaml, path=/orders/{order_id}/refunds, method=POST, not-allowed/error response schemas"
+            }
+          ],
+          "type": "contract"
+        }
+      ],
+      "title": "Publish the updated OpenAPI refund contract",
+      "touches": [
+        "openapi.yaml",
+        "tests/**"
+      ]
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given a support user with the existing appropriate Orders API access and an Order that was created after the cutoff exactly 30 days before the Refund time, is not already refunded, and is not a Cancelled order, when the support user records a Refund for the Order by order ID, then the Orders API records the Refund and returns the updated Order exposed as `refunded` with the Refund time."
+        },
+        {
+          "ac_id": "AC-2.1",
+          "text": "Given a Refund has been recorded for an Order, when the refund-recording response is returned, then the response includes the updated Order exposed as `refunded` and includes the Refund time."
+        }
+      ],
+      "changes_protected_contract": false,
+      "consumes": [
+        "POST /orders/{order_id}/refunds"
+      ],
+      "depends_on": [
+        "US-4"
+      ],
+      "description": "Complete release-readiness verification for the new Orders API version so a support user can record an eligible full Refund through the API without spreadsheet tracking, with CI tests and contract checks passing.",
+      "frs": [
+        "FR-1",
+        "FR-2"
+      ],
+      "id": "US-5",
+      "order": 5,
+      "provides": [],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "low",
+      "risk_reasons": [],
+      "tdd_sections": [
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1",
+            "AC-2.1"
+          ],
+          "id": "TC-5.1",
+          "name": "release_readiness_support_user_can_record_full_refund_without_spreadsheet",
+          "parameters": [
+            {
+              "expected": "workflow completes through Orders API; response records full refund and includes updated order exposed as refunded with refund_time; no spreadsheet step is required",
+              "inputs": "deployed/test environment Orders API, support_user_authorized=true, order_id=ord-readiness, order_created_at after 30-day cutoff, order_status=open, POST /orders/{order_id}/refunds body={}"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Verify deployed refund-recording workflow readiness",
+      "touches": [
+        "tests/**",
+        "README.md",
+        "docs/**"
+      ]
+    }
+  ],
+  "version": 1
+}
