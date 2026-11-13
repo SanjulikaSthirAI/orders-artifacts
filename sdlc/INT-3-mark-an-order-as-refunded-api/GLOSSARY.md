@@ -14,3 +14,15 @@ An order that has been cancelled and cannot be refunded.
 
 ## Refund time
 The time at which the refund is recorded for the order.
+
+## Reason code
+A stable code returned by the Orders API to identify why a Refund is not allowed.
+_Avoid_: error text, failure string
+
+## Support user
+A caller with the existing appropriate Orders API access for recording Refunds.
+_Avoid_: admin, agent
+
+## Refunded
+The exposed Order state after a Refund has been recorded for the Order.
+_Avoid_: reimbursed, paid back

@@ -1,0 +1,17 @@
+{
+  "intent_id": "INT-3",
+  "repos": {
+    "SanjulikaSthirAI/orders-api": {
+      "contract": "openapi.yaml",
+      "endpoints": [
+        "GET /orders",
+        "GET /orders/{order_id}",
+        "POST /orders",
+        "POST /orders/{order_id}/cancel"
+      ],
+      "files": [
+        "openapi.yaml"
+      ]
+    }
+  }
+}

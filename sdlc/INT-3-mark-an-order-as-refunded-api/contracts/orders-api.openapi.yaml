@@ -1,0 +1,100 @@
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.1.0
+paths:
+  /orders/{order_id}/refunds:
+    post:
+      summary: Record a full refund for an order
+      operationId: record_refund_orders__order_id__refunds_post
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Order Id
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordRefundRequest'
+      responses:
+        '200':
+          description: Refund recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Authentication required
+        '403':
+          description: Caller is not authorized to record refunds
+        '404':
+          description: No such order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundNotAllowedError'
+        '409':
+          description: Refund is not allowed for the order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefundNotAllowedError'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    RecordRefundRequest:
+      type: object
+      additionalProperties: false
+      title: RecordRefundRequest
+      description: Empty request body; refund time and refund amount are not supplied by the caller.
+    RefundNotAllowedError:
+      type: object
+      required:
+        - reason_code
+        - message
+      properties:
+        reason_code:
+          $ref: '#/components/schemas/RefundNotAllowedReasonCode'
+        message:
+          type: string
+          minLength: 1
+          title: Message
+      title: RefundNotAllowedError
+    RefundNotAllowedReasonCode:
+      type: string
+      enum:
+        - ORDER_ALREADY_REFUNDED
+        - ORDER_CANCELLED
+        - ORDER_TOO_OLD
+        - ORDER_NOT_FOUND
+      title: RefundNotAllowedReasonCode
+    Order:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        refund_time:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Refund Time
+      title: Order
+    OrderStatus:
+      type: string
+      enum:
+        - placed
+        - shipped
+        - delivered
+        - cancelled
+        - refunded
+      title: OrderStatus
