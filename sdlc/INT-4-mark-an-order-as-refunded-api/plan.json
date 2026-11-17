@@ -1,0 +1,749 @@
+{
+  "intent_id": "INT-4",
+  "project_type": "brownfield",
+  "stories": [
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-9.1",
+          "text": "Given a newly created Order has not been refunded, when the create response is returned, then it shows `refunded: false` and `refund_time: null`."
+        },
+        {
+          "ac_id": "AC-9.2",
+          "text": "Given an Order has not been refunded, when the Order is returned in an existing read response, then it shows `refunded: false` and `refund_time: null`."
+        },
+        {
+          "ac_id": "AC-9.3",
+          "text": "Given an Order has not been refunded, when the Order is returned in an existing list response, then it shows `refunded: false` and `refund_time: null`."
+        },
+        {
+          "ac_id": "AC-9.6",
+          "text": "Given an Order is returned in an existing cancellation success response, when the response is returned, then it shows the existing cancelled state alongside `refunded` and `refund_time`."
+        },
+        {
+          "ac_id": "AC-9.7",
+          "text": "Given an Order is returned in any create, read, list, or cancellation success response, when the response includes cancelled state and refund fields, then it does not show both cancelled state and `refunded: true` for the same Order."
+        }
+      ],
+      "after": [],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [],
+      "description": "Extend the Orders API in-memory order model and response model so newly created, read, listed, and cancelled orders include the additive refund fields with default non-refunded values, without adding refund action behavior yet.",
+      "frs": [
+        "FR-9"
+      ],
+      "id": "US-1",
+      "order": 1,
+      "provides": [
+        "POST /orders",
+        "GET /orders/{order_id}",
+        "GET /orders",
+        "POST /orders/{order_id}/cancel"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {},
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-9.1"
+          ],
+          "id": "TC-1.1",
+          "name": "Create response includes default refund fields for a new order",
+          "parameters": [
+            {
+              "expected": "201 response body includes refunded=false and refund_time=null for the created order",
+              "inputs": "POST /orders with valid create payload"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.2"
+          ],
+          "id": "TC-1.2",
+          "name": "Read response includes default refund fields for a non-refunded order",
+          "parameters": [
+            {
+              "expected": "200 response body includes refunded=false and refund_time=null",
+              "inputs": "Existing created order; GET /orders/{order_id}"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.3"
+          ],
+          "id": "TC-1.3",
+          "name": "List response includes default refund fields for non-refunded orders",
+          "parameters": [
+            {
+              "expected": "200 response body includes the order with refunded=false and refund_time=null",
+              "inputs": "Existing created order; GET /orders"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.6"
+          ],
+          "id": "TC-1.4",
+          "name": "Cancellation success response includes cancelled state and refund fields",
+          "parameters": [
+            {
+              "expected": "Success response shows cancelled state plus refunded=false and refund_time=null",
+              "inputs": "Existing non-refunded order; POST /orders/{order_id}/cancel"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.7"
+          ],
+          "id": "TC-1.5",
+          "name": "Existing order responses never show cancelled and refunded true together before refund action exists",
+          "parameters": [
+            {
+              "expected": "Response does not contain both cancelled=true and refunded=true for the same order",
+              "inputs": "POST /orders create response"
+            },
+            {
+              "expected": "Response does not contain both cancelled=true and refunded=true for the same order",
+              "inputs": "GET /orders/{order_id} for created order"
+            },
+            {
+              "expected": "Listed order does not contain both cancelled=true and refunded=true",
+              "inputs": "GET /orders after creating order"
+            },
+            {
+              "expected": "Cancellation success response does not contain both cancelled=true and refunded=true",
+              "inputs": "POST /orders/{order_id}/cancel for created order"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Expose refund fields on existing Order responses",
+      "touches": [
+        "app/models.py",
+        "app/store.py",
+        "app/main.py",
+        "tests/**",
+        "openapi.yaml"
+      ],
+      "wave": 1
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given an existing Order that is not a Refunded order, is not a Cancelled order, and has a creation timestamp less than or equal to 30\u00d724 hours before the Refund action processing time, when Support performs the Refund action for that Order ID, then the Order is marked as a Refunded order and the refund time is recorded."
+        },
+        {
+          "ac_id": "AC-1.2",
+          "text": "Given an existing Order that is not a Refunded order, is not a Cancelled order, and has a creation timestamp less than or equal to 30\u00d724 hours before the Refund action processing time, when Support performs the Refund action for that Order ID, then the response includes the same refund time that is recorded for the Order."
+        },
+        {
+          "ac_id": "AC-1.3",
+          "text": "Given Support performs the Refund action for an Order ID and supplies a refund time, when the request is processed, then the supplied refund time is not used as the recorded refund time."
+        },
+        {
+          "ac_id": "AC-1.4",
+          "text": "Given Support performs the Refund action for an Order ID, when the request is sent with only the Order ID and no request body, then the Orders API processes the request."
+        },
+        {
+          "ac_id": "AC-2.1",
+          "text": "Given an existing Order that is allowed to be refunded, when Support performs the Refund action for that Order ID, then the response includes the Order ID, whether the Order is a Refunded order, and the refund time."
+        },
+        {
+          "ac_id": "AC-6.1",
+          "text": "Given an existing Order is not a Refunded order, is not a Cancelled order, and the Refund action processing time is earlier than the Order creation timestamp plus 30\u00d724 hours, when Support performs the Refund action for that Order ID, then the Order is marked as a Refunded order and the refund time is recorded."
+        },
+        {
+          "ac_id": "AC-6.2",
+          "text": "Given an existing Order is not a Refunded order, is not a Cancelled order, and the Refund action processing time is equal to the Order creation timestamp plus 30\u00d724 hours, when Support performs the Refund action for that Order ID, then the Order is marked as a Refunded order and the refund time is recorded."
+        },
+        {
+          "ac_id": "AC-9.4",
+          "text": "Given an Order has been refunded, when the Order is returned in an existing read response, then it shows `refunded: true` and the recorded refund time."
+        },
+        {
+          "ac_id": "AC-9.5",
+          "text": "Given an Order has been refunded, when the Order is returned in an existing list response, then it shows `refunded: true` and the recorded refund time."
+        },
+        {
+          "ac_id": "AC-9.7",
+          "text": "Given an Order is returned in any read, list, or Refund action success response, when the response includes cancelled state and refund fields, then it does not show both cancelled state and `refunded: true` for the same Order."
+        }
+      ],
+      "after": [
+        "US-1"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-1"
+      ],
+      "description": "Add the refund action endpoint and store operation for the successful path, using an injected deterministic processing clock to record refund state and refund time for eligible orders with no required request body.",
+      "frs": [
+        "FR-1",
+        "FR-2",
+        "FR-6",
+        "FR-9"
+      ],
+      "id": "US-2",
+      "order": 2,
+      "provides": [
+        "POST /orders/{order_id}/refunds",
+        "GET /orders/{order_id}",
+        "GET /orders"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-1": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "6",
+        "7",
+        "9"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1",
+            "AC-6.1"
+          ],
+          "id": "TC-2.1",
+          "name": "Refunding an eligible order before the cutoff records refund state and time",
+          "parameters": [
+            {
+              "expected": "Success; later read shows refunded=true and refund_time equals processing_time",
+              "inputs": "Order created at processing_time minus 29 days 23:59:59; POST /orders/{order_id}/refunds with no body"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.2"
+          ],
+          "id": "TC-2.2",
+          "name": "Refunding an eligible order at the exact 30 day cutoff succeeds",
+          "parameters": [
+            {
+              "expected": "Success; later read shows refunded=true and refund_time equals processing_time",
+              "inputs": "Order created exactly 30*24 hours before processing_time; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.2"
+          ],
+          "id": "TC-2.3",
+          "name": "Refund response uses the same refund time recorded on the order",
+          "parameters": [
+            {
+              "expected": "Refund response refund_time is 2026-01-31T12:00:00Z and read response refund_time is the same value",
+              "inputs": "Eligible order; deterministic processing_time=2026-01-31T12:00:00Z; POST /orders/{order_id}/refunds then GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.3"
+          ],
+          "id": "TC-2.4",
+          "name": "Supplied refund time in request body is ignored",
+          "parameters": [
+            {
+              "expected": "Success response and later read record refund_time=2026-01-31T12:00:00Z, not 1999-01-01T00:00:00Z",
+              "inputs": "Eligible order; processing_time=2026-01-31T12:00:00Z; request body refund_time=1999-01-01T00:00:00Z; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.4"
+          ],
+          "id": "TC-2.5",
+          "name": "Refund action accepts a request with only the order ID and no body",
+          "parameters": [
+            {
+              "expected": "Success response is returned and order is refunded",
+              "inputs": "Eligible order; POST /orders/{order_id}/refunds with empty body/no request body"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-2.1"
+          ],
+          "id": "TC-2.6",
+          "name": "Refund success response includes order ID refunded flag and refund time",
+          "parameters": [
+            {
+              "expected": "Success response includes order_id matching the path order, refunded=true, and non-null refund_time",
+              "inputs": "Eligible order; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.4"
+          ],
+          "id": "TC-2.7",
+          "name": "Read response exposes refund information after refund",
+          "parameters": [
+            {
+              "expected": "200 response shows refunded=true and the recorded refund_time",
+              "inputs": "Refunded order; GET /orders/{order_id}"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.5"
+          ],
+          "id": "TC-2.8",
+          "name": "List response exposes refund information after refund",
+          "parameters": [
+            {
+              "expected": "200 response includes the order with refunded=true and the recorded refund_time",
+              "inputs": "Refunded order; GET /orders"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-9.7"
+          ],
+          "id": "TC-2.9",
+          "name": "Refund success read and list responses do not show an order as both cancelled and refunded",
+          "parameters": [
+            {
+              "expected": "Response does not contain both cancelled=true and refunded=true for the same order",
+              "inputs": "Eligible order refunded successfully; inspect refund action success response"
+            },
+            {
+              "expected": "Read response does not contain both cancelled=true and refunded=true for the same order",
+              "inputs": "Eligible order refunded successfully; GET /orders/{order_id}"
+            },
+            {
+              "expected": "List response does not contain both cancelled=true and refunded=true for the same order",
+              "inputs": "Eligible order refunded successfully; GET /orders"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Record successful refunds for eligible orders",
+      "touches": [
+        "app/store.py",
+        "app/main.py",
+        "tests/**",
+        "openapi.yaml"
+      ],
+      "wave": 2
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-3.1",
+          "text": "Given no Order exists for the supplied Order ID, when Support performs the Refund action for that Order ID, then a not-found response is returned with Refund reason \"order not found\"."
+        },
+        {
+          "ac_id": "AC-3.2",
+          "text": "Given no Order exists for the supplied Order ID, when Support performs the Refund action for that Order ID and later requests the same Order ID, then the Order is still not found."
+        },
+        {
+          "ac_id": "AC-4.1",
+          "text": "Given an Order is already a Refunded order, when Support performs the Refund action for that Order ID, then the Refund is rejected with Refund reason \"order already refunded\"."
+        },
+        {
+          "ac_id": "AC-4.2",
+          "text": "Given an Order is already a Refunded order, when Support performs the Refund action for that Order ID, then the original refund time remains unchanged in later Order API behavior that returns the Order."
+        },
+        {
+          "ac_id": "AC-5.1",
+          "text": "Given an Order is a Cancelled order, when Support performs the Refund action for that Order ID, then the Refund is rejected with Refund reason \"order cancelled\"."
+        },
+        {
+          "ac_id": "AC-5.2",
+          "text": "Given an Order is a Cancelled order, when Support performs the Refund action for that Order ID, then later Order API behavior that returns the Order still shows the Order as cancelled and not a Refunded order."
+        },
+        {
+          "ac_id": "AC-6.3",
+          "text": "Given an existing Order is not a Refunded order, is not a Cancelled order, and the Refund action processing time is later than the Order creation timestamp plus 30\u00d724 hours, when Support performs the Refund action for that Order ID, then the Refund is rejected with Refund reason \"refund window expired\"."
+        },
+        {
+          "ac_id": "AC-6.4",
+          "text": "Given an Order is not a Recent order, when Support performs the Refund action for that Order ID, then later Order API behavior that returns the Order shows the Order is not a Refunded order."
+        },
+        {
+          "ac_id": "AC-7.1",
+          "text": "Given an Order is already a Refunded order and is not a Recent order, when Support performs the Refund action for that Order ID, then the Refund is rejected with Refund reason \"order already refunded\"."
+        },
+        {
+          "ac_id": "AC-7.2",
+          "text": "Given an Order is a Cancelled order and is not a Recent order, when Support performs the Refund action for that Order ID, then the Refund is rejected with Refund reason \"order cancelled\"."
+        }
+      ],
+      "after": [
+        "US-1",
+        "US-2"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-2"
+      ],
+      "description": "Complete refund rejection behavior for unknown, already refunded, cancelled, and expired-window orders, including the required blocker priority and non-mutation guarantees.",
+      "frs": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6",
+        "FR-7"
+      ],
+      "id": "US-3",
+      "order": 3,
+      "provides": [
+        "POST /orders/{order_id}/refunds"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-1": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ],
+        "US-2": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-3.1"
+          ],
+          "id": "TC-3.1",
+          "name": "Refunding an unknown order returns not found with order not found reason",
+          "parameters": [
+            {
+              "expected": "Not-found response with Refund reason 'order not found'",
+              "inputs": "No order exists for order_id=missing-order; POST /orders/missing-order/refunds"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-3.2"
+          ],
+          "id": "TC-3.2",
+          "name": "Refunding an unknown order does not create an order",
+          "parameters": [
+            {
+              "expected": "Refund response is not found; later read is still not found",
+              "inputs": "No order exists for order_id=missing-order; POST /orders/missing-order/refunds then GET /orders/missing-order"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.1"
+          ],
+          "id": "TC-3.3",
+          "name": "Refunding an already refunded order is rejected with already refunded reason",
+          "parameters": [
+            {
+              "expected": "Rejected response with Refund reason 'order already refunded'",
+              "inputs": "Order already refunded; POST /orders/{order_id}/refunds again"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-4.2"
+          ],
+          "id": "TC-3.4",
+          "name": "Repeated refund leaves original refund time unchanged",
+          "parameters": [
+            {
+              "expected": "Second refund rejected; read response still has refund_time=2026-01-01T10:00:00Z",
+              "inputs": "Order refunded at original_refund_time=2026-01-01T10:00:00Z; second refund attempted at 2026-01-02T10:00:00Z; then GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-5.1"
+          ],
+          "id": "TC-3.5",
+          "name": "Refunding a cancelled order is rejected with order cancelled reason",
+          "parameters": [
+            {
+              "expected": "Rejected response with Refund reason 'order cancelled'",
+              "inputs": "Order is cancelled; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-5.2"
+          ],
+          "id": "TC-3.6",
+          "name": "Refund attempt for cancelled order preserves cancelled non-refunded state",
+          "parameters": [
+            {
+              "expected": "Refund rejected; later read shows cancelled=true, refunded=false, and refund_time=null",
+              "inputs": "Order is cancelled; POST /orders/{order_id}/refunds then GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.3"
+          ],
+          "id": "TC-3.7",
+          "name": "Refunding an order after the 30 day cutoff is rejected with refund window expired reason",
+          "parameters": [
+            {
+              "expected": "Rejected response with Refund reason 'refund window expired'",
+              "inputs": "Order created 30 days plus 1 second before processing_time; not refunded and not cancelled; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-6.4"
+          ],
+          "id": "TC-3.8",
+          "name": "Expired-window refund attempt does not mark order as refunded",
+          "parameters": [
+            {
+              "expected": "Refund rejected; later read shows refunded=false and refund_time=null",
+              "inputs": "Order created 30 days plus 1 second before processing_time; POST /orders/{order_id}/refunds then GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-7.1"
+          ],
+          "id": "TC-3.9",
+          "name": "Already refunded reason takes priority over expired refund window",
+          "parameters": [
+            {
+              "expected": "Rejected response with Refund reason 'order already refunded'",
+              "inputs": "Order is already refunded and created more than 30 days before processing_time; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-7.2"
+          ],
+          "id": "TC-3.10",
+          "name": "Cancelled reason takes priority over expired refund window",
+          "parameters": [
+            {
+              "expected": "Rejected response with Refund reason 'order cancelled'",
+              "inputs": "Order is cancelled and created more than 30 days before processing_time; POST /orders/{order_id}/refunds"
+            }
+          ],
+          "type": "contract"
+        }
+      ],
+      "title": "Reject invalid refund attempts without mutating orders",
+      "touches": [
+        "app/store.py",
+        "app/main.py",
+        "tests/**",
+        "openapi.yaml"
+      ],
+      "wave": 3
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-8.1",
+          "text": "Given an Order is a Refunded order, when Support attempts to cancel that Order, then the cancel attempt is rejected with reason \"order already refunded\"."
+        },
+        {
+          "ac_id": "AC-8.2",
+          "text": "Given an Order is a Refunded order, when Support attempts to cancel that Order, then later Order API behavior that returns the Order shows the Order as a Refunded order and not cancelled."
+        },
+        {
+          "ac_id": "AC-9.7",
+          "text": "Given an Order is returned in read or cancellation behavior, when the response includes cancelled state and refund fields, then it does not show both cancelled state and `refunded: true` for the same Order."
+        }
+      ],
+      "after": [
+        "US-1",
+        "US-2",
+        "US-3"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-2"
+      ],
+      "description": "Update the existing cancel behavior so refunded orders cannot become cancelled, returning the required conflict reason while preserving refund state.",
+      "frs": [
+        "FR-8",
+        "FR-9"
+      ],
+      "id": "US-4",
+      "order": 4,
+      "provides": [
+        "POST /orders/{order_id}/cancel",
+        "GET /orders/{order_id}"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-1": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ],
+        "US-2": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ],
+        "US-3": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-8.1"
+          ],
+          "id": "TC-4.1",
+          "name": "Cancelling a refunded order is rejected with already refunded reason",
+          "parameters": [
+            {
+              "expected": "Rejected response with reason 'order already refunded'",
+              "inputs": "Order has been refunded; POST /orders/{order_id}/cancel"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-8.2"
+          ],
+          "id": "TC-4.2",
+          "name": "Failed cancellation after refund preserves refunded and not-cancelled state",
+          "parameters": [
+            {
+              "expected": "Cancel rejected; later read shows refunded=true, refund_time unchanged, and cancelled=false",
+              "inputs": "Order has been refunded; POST /orders/{order_id}/cancel then GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-9.7"
+          ],
+          "id": "TC-4.3",
+          "name": "Read and cancellation behavior do not show refunded orders as cancelled",
+          "parameters": [
+            {
+              "expected": "Cancellation behavior does not return the order as both cancelled=true and refunded=true",
+              "inputs": "Order has been refunded; POST /orders/{order_id}/cancel rejection response"
+            },
+            {
+              "expected": "Read response does not contain both cancelled=true and refunded=true for the same order",
+              "inputs": "Order has been refunded and cancel was rejected; GET /orders/{order_id}"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Prevent cancellation after refund",
+      "touches": [
+        "app/store.py",
+        "app/main.py",
+        "tests/**",
+        "openapi.yaml"
+      ],
+      "wave": 4
+    }
+  ],
+  "version": 1
+}
