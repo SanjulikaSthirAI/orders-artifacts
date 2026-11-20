@@ -1,0 +1,894 @@
+{
+  "intent_id": "INT-5",
+  "project_type": "brownfield",
+  "stories": [
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given a Support agent with refund permission is viewing an Order that is currently paid, is a Recent order, and has not already been refunded, when the orders screen is shown, then the Refund action is available."
+        },
+        {
+          "ac_id": "AC-1.2",
+          "text": "Given a Support agent with refund permission is viewing an Order that is not currently paid, when the orders screen is shown, then the Refund action is unavailable with a specific reason that only currently paid Orders can be refunded."
+        },
+        {
+          "ac_id": "AC-1.3",
+          "text": "Given a Support agent with refund permission is viewing an Order created more than 30 days before the Refund attempt, when the orders screen is shown, then the Refund action is unavailable with a specific reason that only Orders placed in the last 30 days can be refunded."
+        },
+        {
+          "ac_id": "AC-1.4",
+          "text": "Given a Support agent with refund permission is viewing an Order that has already been refunded, when the orders screen is shown, then the Refund action is unavailable with a specific reason that the Order has already been refunded."
+        }
+      ],
+      "after": [],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [],
+      "description": "Extend the orders API Order representation so authorized Support agents can identify Refund availability and ineligibility from existing order reads before the money-moving endpoint is added.",
+      "frs": [
+        "FR-1"
+      ],
+      "id": "US-1",
+      "order": 1,
+      "provides": [
+        "GET /orders",
+        "GET /orders/{order_id}"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {},
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "5",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1"
+          ],
+          "id": "TC-1.1",
+          "name": "GET order exposes refund action available for paid recent non-refunded order to refund-permitted support agent",
+          "parameters": [
+            {
+              "expected": "refund.available=true; refund.reason=null or absent",
+              "inputs": "agent_refund_permission=true, order_status=paid, order_created_at=standard_now_minus_30_days, refunded=false"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-1.2"
+          ],
+          "id": "TC-1.2",
+          "name": "GET order exposes currently-paid ineligibility reason for unpaid order",
+          "parameters": [
+            {
+              "expected": "refund.available=false; refund.reason='Only currently paid Orders can be refunded.'",
+              "inputs": "agent_refund_permission=true, order_status=pending, order_created_at=standard_now_minus_1_day, refunded=false"
+            },
+            {
+              "expected": "refund.available=false; refund.reason='Only currently paid Orders can be refunded.'",
+              "inputs": "agent_refund_permission=true, order_status=cancelled, order_created_at=standard_now_minus_1_day, refunded=false"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-1.3"
+          ],
+          "id": "TC-1.3",
+          "name": "GET order exposes last-30-days ineligibility reason for non-recent order",
+          "parameters": [
+            {
+              "expected": "refund.available=false; refund.reason='Only Orders placed in the last 30 days can be refunded.'",
+              "inputs": "agent_refund_permission=true, order_status=paid, order_created_at=standard_now_minus_30_days_minus_1_second, refunded=false"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-1.4"
+          ],
+          "id": "TC-1.4",
+          "name": "GET order exposes already-refunded ineligibility reason for refunded order",
+          "parameters": [
+            {
+              "expected": "refund.available=false; refund.reason='The Order has already been refunded.'",
+              "inputs": "agent_refund_permission=true, order_status=paid, order_created_at=standard_now_minus_1_day, refunded=true"
+            }
+          ],
+          "type": "contract"
+        }
+      ],
+      "title": "Add refund-capable Order contract and server-side eligibility",
+      "touches": [
+        "app/models.py",
+        "app/store.py",
+        "app/main.py",
+        "openapi.yaml",
+        "tests/**"
+      ],
+      "wave": 1
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-2.2",
+          "text": "Given the Refund confirmation is shown, when the Support agent submits the confirmation, then the system attempts to issue a Full-order refund for the full paid Order total exactly as captured on the Order."
+        },
+        {
+          "ac_id": "AC-2.4",
+          "text": "Given the Refund confirmation is shown, when the Support agent submits the confirmation, then the Support agent is not required to enter a Refund reason."
+        },
+        {
+          "ac_id": "AC-3.1",
+          "text": "Given a Support agent with refund permission submits confirmation for an Order that is currently paid, is a Recent order, and has not already been refunded, when the Refund completes successfully, then the Order is marked as refunded."
+        },
+        {
+          "ac_id": "AC-3.4",
+          "text": "Given a Refund completes successfully, when a paid-Order fulfillment action is attempted for that Order, then that action is not completed."
+        },
+        {
+          "ac_id": "AC-3.5",
+          "text": "Given a Refund completes successfully, when a customer-facing paid-Order action is attempted for that Order, then that action is not completed."
+        },
+        {
+          "ac_id": "AC-6.1",
+          "text": "Given a Refund completes successfully, when the internal audit/history record is created, then it includes the Support agent, Order ID, refunded amount, and Refund date/time."
+        },
+        {
+          "ac_id": "AC-6.2",
+          "text": "Given a Refund completes successfully and a processor Refund or transaction reference is available, when the internal audit/history record is created, then it includes that reference."
+        },
+        {
+          "ac_id": "AC-6.3",
+          "text": "Given a Refund completes successfully, when the internal audit/history record is created, then it does not include Support agent notes."
+        }
+      ],
+      "after": [
+        "US-1"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-1"
+      ],
+      "description": "Add the authenticated and authorized refund endpoint, injected RefundProcessor, successful refund state transition, refunded paid-action guards, and internal successful Refund audit/history records.",
+      "frs": [
+        "FR-2",
+        "FR-3",
+        "FR-6"
+      ],
+      "id": "US-2",
+      "order": 2,
+      "provides": [
+        "POST /orders/{order_id}/refunds",
+        "POST /orders/{order_id}/cancel"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-1": [
+          "app/main.py",
+          "app/models.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-2.2"
+          ],
+          "id": "TC-2.1",
+          "name": "Refund endpoint charges full captured paid order total exactly",
+          "parameters": [
+            {
+              "expected": "RefundProcessor receives amount=123.45 exactly for order_id; response indicates completed refund",
+              "inputs": "agent_refund_permission=true, order_id=eligible_paid_recent_order, captured_total=123.45, submit_body_without_reason=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.4"
+          ],
+          "id": "TC-2.2",
+          "name": "Refund endpoint accepts confirmation submission without refund reason",
+          "parameters": [
+            {
+              "expected": "request is accepted; no validation error for missing reason; refund completes successfully",
+              "inputs": "agent_refund_permission=true, order_id=eligible_paid_recent_order, request_body={}"
+            }
+          ],
+          "type": "contract"
+        },
+        {
+          "ac_ids": [
+            "AC-3.1"
+          ],
+          "id": "TC-2.3",
+          "name": "Successful refund marks order as refunded",
+          "parameters": [
+            {
+              "expected": "POST refund returns success; subsequent GET order has refunded=true/status=refunded",
+              "inputs": "agent_refund_permission=true, order_status=paid, order_created_at=standard_now_minus_1_day, refunded=false, processor_result=success"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-3.4"
+          ],
+          "id": "TC-2.4",
+          "name": "Paid-order fulfillment action is blocked after successful refund",
+          "parameters": [
+            {
+              "expected": "fulfillment action is not completed; order remains refunded",
+              "inputs": "order_refunded_by_successful_refund=true, attempted_action=fulfillment_cancel_or_equivalent_paid_order_fulfillment_action"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-3.5"
+          ],
+          "id": "TC-2.5",
+          "name": "Customer-facing paid-order action is blocked after successful refund",
+          "parameters": [
+            {
+              "expected": "customer-facing paid-order action is not completed; order remains refunded",
+              "inputs": "order_refunded_by_successful_refund=true, attempted_action=customer_facing_paid_order_action"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.1"
+          ],
+          "id": "TC-2.6",
+          "name": "Successful refund audit history includes core refund details",
+          "parameters": [
+            {
+              "expected": "internal audit record includes support_agent=support-agent-1, order_id=order-123, refunded_amount=123.45, refund_datetime=2026-01-15T10:30:00Z",
+              "inputs": "agent_id=support-agent-1, order_id=order-123, captured_total=123.45, standard_now=2026-01-15T10:30:00Z, processor_result=success"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.2"
+          ],
+          "id": "TC-2.7",
+          "name": "Successful refund audit history includes processor reference when available",
+          "parameters": [
+            {
+              "expected": "internal audit record includes processor_reference=rfnd_abc123",
+              "inputs": "processor_result=success, processor_reference=rfnd_abc123"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.3"
+          ],
+          "id": "TC-2.8",
+          "name": "Successful refund audit history excludes support agent notes",
+          "parameters": [
+            {
+              "expected": "internal audit record contains no support_agent_notes/notes field",
+              "inputs": "agent_id=support-agent-1, order_id=eligible_paid_recent_order, request_body_contains_notes=false, processor_result=success"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Process successful full-order refunds with audit history",
+      "touches": [
+        "app/main.py",
+        "app/models.py",
+        "app/store.py",
+        "openapi.yaml",
+        "tests/**"
+      ],
+      "wave": 2
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-4.1",
+          "text": "Given a Support agent with refund permission submits a Refund confirmation for an Order and that Refund completes successfully, when another Refund submission for the same Order is handled, then the same Order is not refunded a second time."
+        },
+        {
+          "ac_id": "AC-4.2",
+          "text": "Given one Refund has completed successfully for an Order, when repeated submissions for that same Order are handled, then the Order is shown as refunded."
+        },
+        {
+          "ac_id": "AC-5.1",
+          "text": "Given a Support agent with refund permission submits confirmation for an Order that is currently paid, is a Recent order, and has not already been refunded, when the Refund attempt fails, then the Order remains unchanged and no successful Refund is recorded for that Order."
+        }
+      ],
+      "after": [
+        "US-1",
+        "US-2"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-2"
+      ],
+      "description": "Complete refund endpoint failure behavior by requiring Idempotency-Key, replaying successful same-key submissions, rejecting new-key duplicate refunds, and preserving Order and audit state when the processor fails.",
+      "frs": [
+        "FR-4",
+        "FR-5"
+      ],
+      "id": "US-3",
+      "order": 3,
+      "provides": [
+        "POST /orders/{order_id}/refunds"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-1": [
+          "app/main.py",
+          "app/models.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ],
+        "US-2": [
+          "app/main.py",
+          "app/models.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-4.1"
+          ],
+          "id": "TC-3.1",
+          "name": "Duplicate refund submissions do not create a second refund",
+          "parameters": [
+            {
+              "expected": "first submission completes; second submission does not call processor again and does not create second refund/audit record",
+              "inputs": "first_submission_idempotency_key=key-1, second_submission_idempotency_key=key-2, order_id=eligible_paid_recent_order, processor_result=success"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.2"
+          ],
+          "id": "TC-3.2",
+          "name": "Repeated refund submissions leave order shown as refunded",
+          "parameters": [
+            {
+              "expected": "subsequent GET order shows refunded status after each repeated submission",
+              "inputs": "order_id=eligible_paid_recent_order, first_submission=success, repeated_submission_count=2"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-5.1"
+          ],
+          "id": "TC-3.3",
+          "name": "Failed refund attempt leaves order unchanged and records no successful refund",
+          "parameters": [
+            {
+              "expected": "POST refund returns failure; subsequent GET order remains paid and not refunded; no successful refund audit/history record exists",
+              "inputs": "agent_refund_permission=true, order_id=eligible_paid_recent_order, processor_result=failure"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Enforce refund idempotency, duplicate prevention, and processor failure safety",
+      "touches": [
+        "app/main.py",
+        "app/models.py",
+        "app/store.py",
+        "openapi.yaml",
+        "tests/**"
+      ],
+      "wave": 3
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given a Support agent with refund permission is viewing an Order that is currently paid, is a Recent order, and has not already been refunded, when the orders screen is shown, then the Refund action is available."
+        },
+        {
+          "ac_id": "AC-1.2",
+          "text": "Given a Support agent with refund permission is viewing an Order that is not currently paid, when the orders screen is shown, then the Refund action is unavailable with a specific reason that only currently paid Orders can be refunded."
+        },
+        {
+          "ac_id": "AC-1.3",
+          "text": "Given a Support agent with refund permission is viewing an Order created more than 30 days before the Refund attempt, when the orders screen is shown, then the Refund action is unavailable with a specific reason that only Orders placed in the last 30 days can be refunded."
+        },
+        {
+          "ac_id": "AC-1.4",
+          "text": "Given a Support agent with refund permission is viewing an Order that has already been refunded, when the orders screen is shown, then the Refund action is unavailable with a specific reason that the Order has already been refunded."
+        },
+        {
+          "ac_id": "AC-1.5",
+          "text": "Given a Support agent without refund permission is viewing any Order, when the orders screen is shown, then the Refund action is not shown."
+        },
+        {
+          "ac_id": "AC-6.4",
+          "text": "Given a Refund completes successfully, when the orders screen is shown to a Support agent, then the internal audit/history record is not shown on the orders screen."
+        }
+      ],
+      "after": [
+        "US-3"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [
+        "GET /orders",
+        "GET /orders/{order_id}"
+      ],
+      "depends_on": [
+        "US-3"
+      ],
+      "description": "Consume the committed refund-capable API contract through the UI API client and render Refund action visibility and unavailable reasons on the orders screen without exposing the internal audit/history record.",
+      "frs": [
+        "FR-1",
+        "FR-6"
+      ],
+      "id": "US-4",
+      "order": 4,
+      "provides": [],
+      "repo": "SanjulikaSthirAI/orders-ui",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {},
+      "tdd_sections": [
+        "2.2",
+        "3",
+        "5",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1"
+          ],
+          "id": "TC-4.1",
+          "name": "Orders screen shows Refund action for eligible refundable order",
+          "parameters": [
+            {
+              "expected": "Refund action is visible/enabled on the order row or detail",
+              "inputs": "api_order.refund.available=true, api_order.status=paid, api_order.refunded=false, user_refund_permission=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.2"
+          ],
+          "id": "TC-4.2",
+          "name": "Orders screen shows currently-paid unavailable reason for unpaid order",
+          "parameters": [
+            {
+              "expected": "Refund action is unavailable and reason text 'Only currently paid Orders can be refunded.' is shown",
+              "inputs": "api_order.refund.available=false, api_order.refund.reason='Only currently paid Orders can be refunded.', user_refund_permission=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.3"
+          ],
+          "id": "TC-4.3",
+          "name": "Orders screen shows last-30-days unavailable reason for old order",
+          "parameters": [
+            {
+              "expected": "Refund action is unavailable and reason text 'Only Orders placed in the last 30 days can be refunded.' is shown",
+              "inputs": "api_order.refund.available=false, api_order.refund.reason='Only Orders placed in the last 30 days can be refunded.', user_refund_permission=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.4"
+          ],
+          "id": "TC-4.4",
+          "name": "Orders screen shows already-refunded unavailable reason for refunded order",
+          "parameters": [
+            {
+              "expected": "Refund action is unavailable and reason text 'The Order has already been refunded.' is shown",
+              "inputs": "api_order.refund.available=false, api_order.refund.reason='The Order has already been refunded.', user_refund_permission=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.5"
+          ],
+          "id": "TC-4.5",
+          "name": "Orders screen hides Refund action from support agent without refund permission",
+          "parameters": [
+            {
+              "expected": "Refund action is not rendered",
+              "inputs": "user_refund_permission=false, api_order.refund.available=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.4"
+          ],
+          "id": "TC-4.6",
+          "name": "Orders screen does not render internal audit history record",
+          "parameters": [
+            {
+              "expected": "orders screen shows refund summary fields only; no support agent, processor reference, audit/history record, or internal history section is rendered",
+              "inputs": "api_order includes refunded status/amount/date and internal_audit_history-like fields if present in fixture"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Show Refund availability on the orders screen",
+      "touches": [
+        "api/**",
+        "app/**",
+        "config/**",
+        "format/**",
+        "tests/**"
+      ],
+      "wave": 4
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-2.1",
+          "text": "Given a Support agent with refund permission is viewing an Order that is currently paid, is a Recent order, and has not already been refunded, when the Support agent selects Refund, then the system shows a confirmation that the full paid Order total will be refunded."
+        },
+        {
+          "ac_id": "AC-2.2",
+          "text": "Given the Refund confirmation is shown, when the Support agent submits the confirmation, then the system attempts to issue a Full-order refund for the full paid Order total exactly as captured on the Order."
+        },
+        {
+          "ac_id": "AC-2.3",
+          "text": "Given the Refund confirmation is shown, when the Support agent closes or cancels the confirmation without submitting it, then no Refund is issued and the Order remains unchanged."
+        },
+        {
+          "ac_id": "AC-2.4",
+          "text": "Given the Refund confirmation is shown, when the Support agent submits the confirmation, then the Support agent is not required to enter a Refund reason."
+        },
+        {
+          "ac_id": "AC-4.1",
+          "text": "Given a Support agent with refund permission submits a Refund confirmation for an Order and that Refund completes successfully, when another Refund submission for the same Order is handled, then the same Order is not refunded a second time."
+        }
+      ],
+      "after": [
+        "US-4"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [
+        "POST /orders/{order_id}/refunds"
+      ],
+      "depends_on": [
+        "US-4"
+      ],
+      "description": "Add the confirmation flow for eligible refunds, generate and reuse one Idempotency-Key per confirmed attempt, call the refund endpoint only through the API client, and avoid issuing a request when confirmation is cancelled.",
+      "frs": [
+        "FR-2",
+        "FR-4"
+      ],
+      "id": "US-5",
+      "order": 5,
+      "provides": [],
+      "repo": "SanjulikaSthirAI/orders-ui",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-4": [
+          "api/**",
+          "app/**",
+          "config/**",
+          "format/**",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.2",
+        "3",
+        "5",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-2.1"
+          ],
+          "id": "TC-5.1",
+          "name": "Selecting Refund opens confirmation with full paid order total",
+          "parameters": [
+            {
+              "expected": "confirmation dialog is shown with text indicating full paid order total 123.45 will be refunded",
+              "inputs": "order_id=order-123, refund.available=true, paid_total=123.45, user_clicks=Refund"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.2"
+          ],
+          "id": "TC-5.2",
+          "name": "Submitting confirmation calls refund API for full captured order total",
+          "parameters": [
+            {
+              "expected": "API client submit refund is called for order_id=order-123 with idempotency key; UI does not request or send an override amount",
+              "inputs": "order_id=order-123, paid_total=123.45, confirmation_submitted=true"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.3"
+          ],
+          "id": "TC-5.3",
+          "name": "Cancelling confirmation does not issue refund and leaves order display unchanged",
+          "parameters": [
+            {
+              "expected": "refund API client is not called; order still displays original paid/not-refunded state",
+              "inputs": "order_id=order-123, paid_total=123.45, confirmation_shown=true, user_action=cancel"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.4"
+          ],
+          "id": "TC-5.4",
+          "name": "Submitting confirmation does not require refund reason",
+          "parameters": [
+            {
+              "expected": "refund API client is called; no validation message requires a refund reason",
+              "inputs": "confirmation_shown=true, reason_field_absent_or_empty=true, user_action=submit"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.1"
+          ],
+          "id": "TC-5.5",
+          "name": "Confirmed attempt reuses one idempotency key to avoid duplicate refunding on retry",
+          "parameters": [
+            {
+              "expected": "all API client calls for the same confirmed attempt use the same Idempotency-Key value",
+              "inputs": "order_id=order-123, same_confirmed_attempt_retry_count=2"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Confirm and submit full-order refunds from the orders screen",
+      "touches": [
+        "api/**",
+        "app/**",
+        "config/**",
+        "format/**",
+        "tests/**"
+      ],
+      "wave": 5
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-3.2",
+          "text": "Given a Refund completes successfully, when the orders screen is shown to a Support agent, then it shows refunded status, refunded amount, and Refund date/time."
+        },
+        {
+          "ac_id": "AC-3.3",
+          "text": "Given a Refund completes successfully, when the result is shown to the Support agent, then the message says that the Refund completed and that the full paid Order total was refunded."
+        },
+        {
+          "ac_id": "AC-4.2",
+          "text": "Given one Refund has completed successfully for an Order, when repeated submissions for that same Order are handled, then the Order is shown as refunded."
+        },
+        {
+          "ac_id": "AC-5.2",
+          "text": "Given a Refund attempt fails, when the result is shown to the Support agent, then the message says \u201cThe refund could not be completed. Please try again.\u201d"
+        },
+        {
+          "ac_id": "AC-6.4",
+          "text": "Given a Refund completes successfully, when the orders screen is shown to a Support agent, then the internal audit/history record is not shown on the orders screen."
+        }
+      ],
+      "after": [
+        "US-4",
+        "US-5"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [
+        "POST /orders/{order_id}/refunds",
+        "GET /orders",
+        "GET /orders/{order_id}"
+      ],
+      "depends_on": [
+        "US-5"
+      ],
+      "description": "Update the orders screen after refund completion to show refunded state, amount, date/time, and approved success or failure messages while excluding audit/history records and sensitive details from Refund messages.",
+      "frs": [
+        "FR-3",
+        "FR-4",
+        "FR-5",
+        "FR-6"
+      ],
+      "id": "US-6",
+      "order": 6,
+      "provides": [],
+      "repo": "SanjulikaSthirAI/orders-ui",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-4": [
+          "api/**",
+          "app/**",
+          "config/**",
+          "format/**",
+          "tests/**"
+        ],
+        "US-5": [
+          "api/**",
+          "app/**",
+          "config/**",
+          "format/**",
+          "tests/**"
+        ]
+      },
+      "tdd_sections": [
+        "2.2",
+        "3",
+        "5",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-3.2"
+          ],
+          "id": "TC-6.1",
+          "name": "Orders screen shows refunded status amount and date time after success",
+          "parameters": [
+            {
+              "expected": "orders screen shows refunded status, 123.45 refunded amount, and formatted refund date/time for 2026-01-15T10:30:00Z",
+              "inputs": "refund_api_result=success, refreshed_api_order.status=refunded, refunded_amount=123.45, refunded_at=2026-01-15T10:30:00Z"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-3.3"
+          ],
+          "id": "TC-6.2",
+          "name": "Refund success result message says completed and full paid total refunded",
+          "parameters": [
+            {
+              "expected": "message says refund completed and full paid order total 123.45 was refunded",
+              "inputs": "refund_api_result=success, paid_total=123.45"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.2"
+          ],
+          "id": "TC-6.3",
+          "name": "Repeated refund submission outcome keeps order displayed as refunded",
+          "parameters": [
+            {
+              "expected": "orders screen shows refunded status and refunded amount",
+              "inputs": "repeat_refund_submission_result=already_refunded_or_replayed_success, refreshed_api_order.status=refunded, refunded_amount=123.45"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-5.2"
+          ],
+          "id": "TC-6.4",
+          "name": "Refund failure result shows approved retry message",
+          "parameters": [
+            {
+              "expected": "message exactly 'The refund could not be completed. Please try again.'",
+              "inputs": "refund_api_result=failure"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-6.4"
+          ],
+          "id": "TC-6.5",
+          "name": "Orders screen excludes audit history after refund success",
+          "parameters": [
+            {
+              "expected": "orders screen does not show internal audit/history record, support agent, processor reference, notes, or audit section",
+              "inputs": "refreshed_api_order includes refunded status/amount/date and audit/history-like internal fields in fixture"
+            }
+          ],
+          "type": "integration"
+        }
+      ],
+      "title": "Display refund success and failure outcomes on the orders screen",
+      "touches": [
+        "api/**",
+        "app/**",
+        "config/**",
+        "format/**",
+        "tests/**"
+      ],
+      "wave": 6
+    }
+  ],
+  "version": 1
+}
