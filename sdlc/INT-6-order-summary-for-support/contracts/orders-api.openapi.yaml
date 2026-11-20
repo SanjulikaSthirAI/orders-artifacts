@@ -1,0 +1,80 @@
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.1.0
+paths:
+  /orders:
+    get:
+      summary: List orders, newest first
+      operationId: list_orders_orders_get
+      parameters:
+        - name: customer
+          in: query
+          required: false
+          schema:
+            anyOf:
+              - type: string
+              - type: 'null'
+            title: Customer
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+                title: Response List Orders Orders Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /orders/summary:
+    get:
+      summary: Get order book summary
+      operationId: get_order_summary_orders_summary_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderBookSummary'
+components:
+  schemas:
+    OrderBookSummary:
+      properties:
+        counts:
+          $ref: '#/components/schemas/OrderStatusCounts'
+        total_value_cents:
+          type: integer
+          title: Total Value Cents
+      type: object
+      required:
+        - counts
+        - total_value_cents
+      title: OrderBookSummary
+    OrderStatusCounts:
+      properties:
+        placed:
+          type: integer
+          title: Placed
+        shipped:
+          type: integer
+          title: Shipped
+        delivered:
+          type: integer
+          title: Delivered
+        cancelled:
+          type: integer
+          title: Cancelled
+      type: object
+      required:
+        - placed
+        - shipped
+        - delivered
+        - cancelled
+      title: OrderStatusCounts
