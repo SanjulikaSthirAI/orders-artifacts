@@ -1,0 +1,456 @@
+{
+  "intent_id": "INT-6",
+  "project_type": "brownfield",
+  "stories": [
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-1.1",
+          "text": "Given existing Orders in the Order book, when a Support lead requests the Order book summary, then the response includes counts for placed, shipped, delivered and cancelled Orders across all existing Orders."
+        },
+        {
+          "ac_id": "AC-1.2",
+          "text": "Given no existing Orders, when a Support lead requests the Order book summary, then the response includes placed, shipped, delivered and cancelled counts of 0 and a Non-cancelled total value of 0 cents."
+        },
+        {
+          "ac_id": "AC-1.3",
+          "text": "Given existing Orders in the Order book and any Customer filter or Order status filter used for returned Orders, when a Support lead requests the Order book summary, then the Order book summary is calculated across all existing Orders without applying those filters."
+        },
+        {
+          "ac_id": "AC-2.1",
+          "text": "Given there are no Orders for one or more of placed, shipped, delivered or cancelled, when a Support lead requests the Order book summary, then the response still includes each absent Order status with a count of 0."
+        },
+        {
+          "ac_id": "AC-2.2",
+          "text": "Given an Order has Order status placed, shipped, delivered or cancelled, when a Support lead requests the Order book summary, then that Order contributes 1 to the matching Order status count."
+        },
+        {
+          "ac_id": "AC-2.3",
+          "text": "Given an Order has Order status outside placed, shipped, delivered and cancelled, when a Support lead requests the Order book summary, then that Order does not contribute to any Order status count."
+        },
+        {
+          "ac_id": "AC-3.1",
+          "text": "Given existing Orders with Order status placed, shipped or delivered, when a Support lead requests the Order book summary, then the Non-cancelled total value equals the sum of their full stored values in cents."
+        },
+        {
+          "ac_id": "AC-3.2",
+          "text": "Given existing Orders with Order status cancelled, when a Support lead requests the Order book summary, then cancelled Orders do not contribute to the Non-cancelled total value."
+        },
+        {
+          "ac_id": "AC-3.3",
+          "text": "Given an Order has an Order status outside placed, shipped, delivered and cancelled, when a Support lead requests the Order book summary, then that Order does not contribute to the Non-cancelled total value."
+        },
+        {
+          "ac_id": "AC-3.4",
+          "text": "Given an Order with Order status placed, shipped or delivered has a missing or null stored value, when a Support lead requests the Order book summary, then that Order contributes 0 cents to the Non-cancelled total value."
+        },
+        {
+          "ac_id": "AC-3.5",
+          "text": "Given an Order with Order status placed, shipped or delivered has a negative stored value, when a Support lead requests the Order book summary, then that Order contributes the negative value exactly as stored to the Non-cancelled total value."
+        }
+      ],
+      "after": [],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [],
+      "description": "Add store-level summary calculation, response models, route handling, deterministic tests, and regenerated OpenAPI contract for GET /orders/summary. The summary is global across all existing Orders and returns status counts plus Non-cancelled total value without adding storage, authentication, pagination, or logging customer data.",
+      "frs": [
+        "FR-1",
+        "FR-2",
+        "FR-3"
+      ],
+      "id": "US-1",
+      "order": 1,
+      "provides": [
+        "GET /orders/summary"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {},
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-1.1",
+            "AC-2.2",
+            "AC-3.1",
+            "AC-3.2"
+          ],
+          "id": "TC-1.1",
+          "name": "GET /orders/summary returns global status counts and non-cancelled total for existing orders",
+          "parameters": [
+            {
+              "expected": "HTTP 200; counts={placed:2,shipped:1,delivered:1,cancelled:1}; non_cancelled_total_value_cents=8000",
+              "inputs": "orders=[{status=placed,value_cents=1000},{status=shipped,value_cents=2500},{status=delivered,value_cents=4000},{status=cancelled,value_cents=9999},{status=placed,value_cents=500}]"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.2",
+            "AC-2.1"
+          ],
+          "id": "TC-1.2",
+          "name": "GET /orders/summary returns zero counts and zero total when order book is empty",
+          "parameters": [
+            {
+              "expected": "HTTP 200; counts={placed:0,shipped:0,delivered:0,cancelled:0}; non_cancelled_total_value_cents=0",
+              "inputs": "orders=[]"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.3"
+          ],
+          "id": "TC-1.3",
+          "name": "GET /orders/summary is not affected by order retrieval customer or status filters",
+          "parameters": [
+            {
+              "expected": "GET /orders/summary HTTP 200; counts={placed:1,shipped:1,delivered:0,cancelled:1}; non_cancelled_total_value_cents=3000",
+              "inputs": "orders=[{status=placed,value_cents=1000,customer=Alice},{status=shipped,value_cents=2000,customer=Bob},{status=cancelled,value_cents=3000,customer=Alice}]; prior_or_parallel_get_orders_filters={customer=Alice,status=placed}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.1"
+          ],
+          "id": "TC-1.4",
+          "name": "GET /orders/summary includes absent supported statuses with zero counts",
+          "parameters": [
+            {
+              "expected": "HTTP 200; counts={placed:1,shipped:0,delivered:0,cancelled:0}; non_cancelled_total_value_cents=1000",
+              "inputs": "orders=[{status=placed,value_cents=1000}]"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-2.3",
+            "AC-3.3"
+          ],
+          "id": "TC-1.5",
+          "name": "GET /orders/summary excludes unsupported statuses from counts and total",
+          "parameters": [
+            {
+              "expected": "HTTP 200; counts={placed:1,shipped:0,delivered:0,cancelled:0}; non_cancelled_total_value_cents=1000",
+              "inputs": "orders=[{status=placed,value_cents=1000},{status=returned,value_cents=7000},{status=pending,value_cents=3000}]"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-3.4"
+          ],
+          "id": "TC-1.6",
+          "name": "GET /orders/summary treats missing or null non-cancelled stored values as zero",
+          "parameters": [
+            {
+              "expected": "HTTP 200; counts={placed:1,shipped:1,delivered:1,cancelled:0}; non_cancelled_total_value_cents=250",
+              "inputs": "orders=[{status=placed,value_cents=null},{status=shipped,value_cents=MISSING},{status=delivered,value_cents=250}]"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-3.5"
+          ],
+          "id": "TC-1.7",
+          "name": "GET /orders/summary includes negative non-cancelled stored values exactly",
+          "parameters": [
+            {
+              "expected": "HTTP 200; counts={placed:1,shipped:1,delivered:0,cancelled:0}; non_cancelled_total_value_cents=350",
+              "inputs": "orders=[{status=placed,value_cents=-150},{status=shipped,value_cents=500}]"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-1.1",
+            "AC-1.2",
+            "AC-2.1",
+            "AC-3.1"
+          ],
+          "id": "TC-1.8",
+          "name": "OpenAPI documents GET /orders/summary response schema with all status counts and non-cancelled total",
+          "parameters": [
+            {
+              "expected": "Path GET /orders/summary exists; successful response schema requires counts for placed, shipped, delivered, cancelled and non_cancelled_total_value_cents as integer cents",
+              "inputs": "openapi.yaml for GET /orders/summary"
+            }
+          ],
+          "type": "contract"
+        }
+      ],
+      "title": "Add global Order book summary endpoint",
+      "touches": [
+        "app/models.py",
+        "app/store.py",
+        "app/main.py",
+        "openapi.yaml",
+        "tests/**/*"
+      ],
+      "wave": 1
+    },
+    {
+      "acceptance_criteria": [
+        {
+          "ac_id": "AC-4.1",
+          "text": "Given Orders with stored Customer names, when a Support lead requests Orders with a non-blank Customer filter, then the response includes only Orders whose stored Customer name exactly matches the trimmed Customer filter value with the same letter casing."
+        },
+        {
+          "ac_id": "AC-4.2",
+          "text": "Given an Order with Customer name `Alice`, when a Support lead requests Orders with Customer filter value ` Alice `, then the Order is included in the response."
+        },
+        {
+          "ac_id": "AC-4.3",
+          "text": "Given an Order with Customer name `Alice`, when a Support lead requests Orders with Customer filter value `alice`, then the Order is not included in the response."
+        },
+        {
+          "ac_id": "AC-4.4",
+          "text": "Given a non-blank Customer filter and no matching Orders, when a Support lead requests Orders, then the system returns a successful response with no Orders."
+        },
+        {
+          "ac_id": "AC-4.5",
+          "text": "Given Orders with missing or null Customer names, when a Support lead requests Orders with a non-blank Customer filter, then those Orders are not included in the response."
+        },
+        {
+          "ac_id": "AC-4.6",
+          "text": "Given Orders with missing or null Customer names that are returned when no Customer filter is applied, when a Support lead requests Orders without a Customer filter, then those Orders remain in the response."
+        },
+        {
+          "ac_id": "AC-4.7",
+          "text": "Given a blank or whitespace-only Customer filter value, when a Support lead requests Orders, then no Customer filter is applied."
+        },
+        {
+          "ac_id": "AC-5.1",
+          "text": "Given both a non-blank Customer filter and an Order status filter are provided, when a Support lead requests Orders, then the response includes only Orders matching both the trimmed exact Customer name and the requested Order status."
+        },
+        {
+          "ac_id": "AC-5.2",
+          "text": "Given only an Order status filter is provided, when a Support lead requests Orders, then only the Order status filter is applied."
+        },
+        {
+          "ac_id": "AC-5.3",
+          "text": "Given no Customer filter is provided, when a Support lead requests Orders, then no Customer filter is applied."
+        }
+      ],
+      "after": [
+        "US-1"
+      ],
+      "changes_protected_contract": true,
+      "consumes": [],
+      "depends_on": [
+        "US-1"
+      ],
+      "description": "Extend the existing GET /orders implementation with an optional customer query parameter, update store filtering to trim and exact-match Customer name while preserving existing status-filter behavior, add deterministic tests, and regenerate OpenAPI contract version 1.1.0 with the additive parameter.",
+      "frs": [
+        "FR-4",
+        "FR-5"
+      ],
+      "id": "US-2",
+      "order": 2,
+      "provides": [
+        "GET /orders"
+      ],
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "risk_reasons": [
+        "changes a protected contract"
+      ],
+      "shares": {
+        "US-1": [
+          "app/main.py",
+          "app/store.py",
+          "openapi.yaml",
+          "tests/**/*"
+        ]
+      },
+      "tdd_sections": [
+        "2.1",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "tests": [
+        {
+          "ac_ids": [
+            "AC-4.1"
+          ],
+          "id": "TC-2.1",
+          "name": "GET /orders with non-blank customer returns only exact case-sensitive customer matches after trimming",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1,o3]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed},{id=o2,customer=Bob,status=placed},{id=o3,customer=Alice,status=shipped}]; query={customer=Alice}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.2"
+          ],
+          "id": "TC-2.2",
+          "name": "GET /orders trims leading and trailing spaces from customer filter",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed},{id=o2,customer=Bob,status=placed}]; query={customer=' Alice '}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.3"
+          ],
+          "id": "TC-2.3",
+          "name": "GET /orders customer filter is case-sensitive",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed}]; query={customer=alice}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.4"
+          ],
+          "id": "TC-2.4",
+          "name": "GET /orders with non-blank customer and no matches succeeds with empty orders",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed}]; query={customer=Charlie}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.5"
+          ],
+          "id": "TC-2.5",
+          "name": "GET /orders excludes missing or null customer names when non-blank customer filter is provided",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o3]",
+              "inputs": "orders=[{id=o1,customer=null,status=placed},{id=o2,customer=MISSING,status=shipped},{id=o3,customer=Alice,status=delivered}]; query={customer=Alice}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.6",
+            "AC-5.3"
+          ],
+          "id": "TC-2.6",
+          "name": "GET /orders without customer filter returns orders with missing or null customer names",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1,o2,o3]",
+              "inputs": "orders=[{id=o1,customer=null,status=placed},{id=o2,customer=MISSING,status=shipped},{id=o3,customer=Alice,status=delivered}]; query={}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.7"
+          ],
+          "id": "TC-2.7",
+          "name": "GET /orders treats blank or whitespace-only customer filter as no customer filter",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1,o2,o3]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed},{id=o2,customer=Bob,status=shipped},{id=o3,customer=null,status=delivered}]; query={customer='   '}"
+            },
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1,o2,o3]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed},{id=o2,customer=Bob,status=shipped},{id=o3,customer=null,status=delivered}]; query={customer=''}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-5.1"
+          ],
+          "id": "TC-2.8",
+          "name": "GET /orders with customer and status filters returns only orders matching both",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed},{id=o2,customer=Alice,status=shipped},{id=o3,customer=Bob,status=placed}]; query={customer=' Alice ',status=placed}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-5.2"
+          ],
+          "id": "TC-2.9",
+          "name": "GET /orders with only status filter applies only status filter",
+          "parameters": [
+            {
+              "expected": "HTTP 200; returned_order_ids=[o1,o2]",
+              "inputs": "orders=[{id=o1,customer=Alice,status=placed},{id=o2,customer=Bob,status=placed},{id=o3,customer=Alice,status=shipped}]; query={status=placed}"
+            }
+          ],
+          "type": "integration"
+        },
+        {
+          "ac_ids": [
+            "AC-4.1",
+            "AC-5.1",
+            "AC-5.2",
+            "AC-5.3"
+          ],
+          "id": "TC-2.10",
+          "name": "OpenAPI documents optional customer query parameter on GET /orders without removing status filter",
+          "parameters": [
+            {
+              "expected": "GET /orders has optional customer query parameter; existing optional status query parameter remains documented; successful response schema for returned orders remains compatible",
+              "inputs": "openapi.yaml for GET /orders"
+            }
+          ],
+          "type": "contract"
+        }
+      ],
+      "title": "Add customer filtering to returned Orders",
+      "touches": [
+        "app/store.py",
+        "app/main.py",
+        "openapi.yaml",
+        "tests/**/*"
+      ],
+      "wave": 2
+    }
+  ],
+  "version": 1
+}
