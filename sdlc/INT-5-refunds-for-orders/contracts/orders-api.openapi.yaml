@@ -1,0 +1,211 @@
+openapi: 3.1.0
+info:
+  title: Orders API
+  version: 1.1.0
+paths:
+  /orders/{order_id}/refunds:
+    post:
+      summary: Refund an order
+      operationId: refund_order_orders__order_id__refunds_post
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            title: Order Id
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+            title: Idempotency Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Missing refund permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: No such order
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: The order is not refundable or has already been refunded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+        '503':
+          description: Refund processor unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Error:
+      properties:
+        detail:
+          type: string
+          title: Detail
+      type: object
+      required:
+        - detail
+      title: Error
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    Order:
+      properties:
+        id:
+          type: string
+          title: Id
+        customer_name:
+          type: string
+          title: Customer Name
+        items:
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          type: array
+          title: Items
+        total_cents:
+          type: integer
+          title: Total Cents
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        created_at:
+          type: string
+          format: date-time
+          title: Created At
+        delivered_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Delivered At
+        refunded_amount_cents:
+          anyOf:
+            - type: integer
+              minimum: 0
+            - type: 'null'
+          title: Refunded Amount Cents
+        refunded_at:
+          anyOf:
+            - type: string
+              format: date-time
+            - type: 'null'
+          title: Refunded At
+        refund_unavailable_reason:
+          anyOf:
+            - $ref: '#/components/schemas/RefundUnavailableReason'
+            - type: 'null'
+          title: Refund Unavailable Reason
+      type: object
+      required:
+        - id
+        - customer_name
+        - items
+        - total_cents
+        - status
+        - created_at
+      title: Order
+    OrderItem:
+      properties:
+        sku:
+          type: string
+          maxLength: 40
+          minLength: 1
+          title: Sku
+        name:
+          type: string
+          maxLength: 120
+          minLength: 1
+          title: Name
+        quantity:
+          type: integer
+          maximum: 100
+          minimum: 1
+          title: Quantity
+        unit_price_cents:
+          type: integer
+          minimum: 0
+          title: Unit Price Cents
+      type: object
+      required:
+        - sku
+        - name
+        - quantity
+        - unit_price_cents
+      title: OrderItem
+    OrderStatus:
+      type: string
+      enum:
+        - placed
+        - shipped
+        - delivered
+        - cancelled
+        - refunded
+      title: OrderStatus
+    RefundUnavailableReason:
+      type: string
+      enum:
+        - not_paid
+        - older_than_30_days
+        - already_refunded
+      title: RefundUnavailableReason
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+              - type: string
+              - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+        - loc
+        - msg
+        - type
+      title: ValidationError
