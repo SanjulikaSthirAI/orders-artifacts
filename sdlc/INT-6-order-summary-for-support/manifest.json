@@ -1,0 +1,45 @@
+{
+  "approved_by": [
+    "sakshiyadav-ds"
+  ],
+  "branch": "develop",
+  "feature_branch": "feature/INT-6-order-summary-for-support",
+  "intent_id": "INT-6",
+  "plan": "https://github.com/SanjulikaSthirAI/orders-artifacts/blob/feature/INT-6-order-summary-for-support/sdlc/INT-6-order-summary-for-support/plan.md",
+  "repos": {
+    "SanjulikaSthirAI/orders-api": {
+      "ci2": "EVD-8",
+      "ci3": "EVD-9",
+      "feature_pr": "https://github.com/SanjulikaSthirAI/orders-api/pull/3",
+      "intent_tests_digest": "d7b688437ad2ab9843cedec95ee3f592b904aae2a8448e5ba9442e41460ad0b7",
+      "merge_sha": "259395aacbd7054a3f62d50d9f3c948144ea1d76"
+    }
+  },
+  "stories": [
+    {
+      "ci1": "EVD-3",
+      "ci2": "EVD-4",
+      "id": "US-1",
+      "merge_sha": "fd48c1b4ecf60f852ce15cf7841a69c9c9512b1d",
+      "pr": "https://github.com/SanjulikaSthirAI/orders-api/pull/1",
+      "quality_gate": "RUB-2",
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "title": "Add global Order book summary endpoint",
+      "work_item_id": 3145
+    },
+    {
+      "ci1": "EVD-6",
+      "ci2": "EVD-7",
+      "id": "US-2",
+      "merge_sha": "1c3f3bbd0656a97c32e91638a78e70d536e34474",
+      "pr": "https://github.com/SanjulikaSthirAI/orders-api/pull/2",
+      "quality_gate": "RUB-5",
+      "repo": "SanjulikaSthirAI/orders-api",
+      "risk": "high",
+      "title": "Add customer filtering to returned Orders",
+      "work_item_id": 3146
+    }
+  ],
+  "title": ""
+}
